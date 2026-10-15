@@ -1,0 +1,40 @@
+name: DORA Metrics & Dashboard Automation
+
+on:
+  push:
+    branches: [ "main" ]
+  schedule:
+    - cron: '0 0 * * 1' # 매주 월요일 자동 실행 (주간 보고서 생성)
+  workflow_dispatch: # GitHub 웹 UI에서 수동 실행 가능
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-report:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Run DORA Data Collection & Generate Dashboard
+      run: python generate_dora.py
+
+    - name: Upload DORA JSON Artifact (선택 과제)
+      uses: actions/upload-artifact@v4
+      with:
+        name: dora-metrics-json
+        path: dora-metrics.json
+
+    - name: Commit and Push Updated README and Chart
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add README.md dora-dashboard.png dora-metrics.json
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Chore: Update DORA dashboard & report [skip ci]" && git push)
